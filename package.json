@@ -1,0 +1,22 @@
+{
+  "name": "electron_demo",
+  "version": "1.0.0",
+  "description": "electron_demo",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "repository": "",
+  "keywords": [
+    "Electron",
+    "quick",
+    "start",
+    "tutorial",
+    "demo"
+  ],
+  "author": "ChangZhouYyh <528471661@qq.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^32.1.2"
+  }
+}
