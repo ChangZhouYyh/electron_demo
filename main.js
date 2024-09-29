@@ -1,87 +1,95 @@
-// 控制应用程序生命周期和创建本地浏览器窗口的模块
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
-const { autoUpdater } = require('electron-updater');
-const path = require('node:path')
+const { app, BrowserWindow, Tray, Menu, ipcMain } = require('electron');
+const notifier = require('node-notifier');
+const path = require('path');
+let mainWindow;
+let tray = null;
 
-
-
-/** 应用最新版本查询 */
-function checkUpdate() {
-
-
-  autoUpdater.setFeedURL({
-    provider: "github",
-    owner: "ChangZhouYyh",
-    repo: "electron_demo",
-    token: process.env.GITHUB_TOKEN
+const noti = () => {
+  // 使用 node-notifier 发送美化的通知
+  notifier.notify({
+    title: '欢迎使用我的应用',
+    message: '这是一个美化的消息通知示例。',
+    icon: 'public/icon.png', // 替换为你的图标路径
+    sound: true, // 是否播放声音
+    wait: false, // 等待用户响应
   });
-
-
-  // 检测更新
-  autoUpdater.checkForUpdates();
-
-  //监听'error'事件
-  autoUpdater.on('error', (err) => {
-    console.log(err);
-  })
-
-  //监听'update-available'事件，发现有新版本时触发
-  autoUpdater.on('update-available', () => {
-    console.log('found new version');
-  })
-
-  //默认会自动下载新版本，如果不想自动下载，设置autoUpdater.autoDownload = false
-
-  //监听'update-downloaded'事件，新版本下载完成时触发
-  autoUpdater.on('update-downloaded', () => {
-    dialog.showMessageBox({
-      type: 'info',
-      title: '应用更新',
-      message: '发现新版本，是否更新？',
-      buttons: ['是', '否']
-    }).then((buttonIndex) => {
-      if (buttonIndex.response == 0) {
-        autoUpdater.quitAndInstall();
-        app.quit();
-      }
-    })
-  })
 }
+
+
+ipcMain.on('send_noti', () => {
+  noti()
+});
+
 
 
 function createWindow() {
-  // 创建浏览器窗口。
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
+    icon: 'public/icon.png', // 替换为你的图标路径
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      enableRemoteModule: false,
+      nodeIntegration: false,
+    },
+  });
+
+  mainWindow.loadFile('index.html');
+
+  // 处理关闭事件
+  mainWindow.on('close', (event) => {
+    if (!app.isQuiting) { // 检查是否是通过托盘退出
+      event.preventDefault(); // 阻止默认关闭行为
+      if (mainWindow) { // 确保 mainWindow 存在
+        mainWindow.hide(); // 隐藏窗口
+      }
     }
-  })
+  });
 
-  // 加载应用的 index.html。
-  mainWindow.loadFile('index.html')
-
-  // 打开开发者工具。
-  // mainWindow.webContents.openDevTools()
+  // 监听窗口被销毁事件
+  mainWindow.on('closed', () => {
+    mainWindow = null; // 清空引用
+  });
 }
 
-// 当 Electron 完成初始化并准备创建浏览器窗口时，将调用此方法。
-// 一些 API 只能在此事件发生后使用。
-app.whenReady().then(() => {
-  checkUpdate()
-  createWindow()
+app.on('ready', () => {
+  createWindow();
 
-  app.on('activate', function () {
-    // 在 macOS 上，通常在应用的 dock 图标被点击且没有其他窗口打开时重新创建窗口。
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
-  })
-})
+  // 创建系统托盘图标
+  tray = new Tray('public/icon.png'); // 替换为你的图标路径
+  const contextMenu = Menu.buildFromTemplate([
+    { label: '退出', click: () => { app.isQuiting = true; app.quit(); } }
+  ]);
+  tray.setToolTip('electron_demo');
+  tray.setContextMenu(contextMenu);
 
-// 当所有窗口关闭时退出，除了 macOS。在 macOS 上，应用程序及其菜单栏通常保持活动状态，直到用户显式使用 Cmd + Q 退出。
-app.on('window-all-closed', function () {
-  if (process.platform !== 'darwin') app.quit()
-})
+  // 点击托盘图标时恢复窗口
+  tray.on('click', () => {
+    if (mainWindow) {
+      if (!mainWindow.isVisible()) {
+        mainWindow.show(); // 显示窗口
+        mainWindow.focus(); // 确保窗口获得焦点
+      }
+    }
+  });
 
-// 在此文件中，您可以包含应用特定的主进程代码。
-// 您也可以将它们放在单独的文件中并在此处引入。
+
+});
+
+// 处理应用退出
+app.on('before-quit', () => {
+  app.isQuiting = true; // 设置退出标志
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+app.on('activate', () => {
+  if (mainWindow === null) {
+    createWindow();
+  }
+});
