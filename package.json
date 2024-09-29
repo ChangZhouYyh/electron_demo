@@ -1,11 +1,12 @@
 {
   "name": "electron_demo",
-  "version": "1.0.0",
+  "version": "1.0.9",
   "description": "electron_demo",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder"
+    "build": "electron-builder",
+    "dist-and-publish": "electron-builder --win --publish always"
   },
   "keywords": [
     "Electron",
@@ -19,6 +20,19 @@
   "devDependencies": {
     "electron": "^32.1.2",
     "electron-builder": "^25.0.5"
+  },
+  "win": {
+    "target": "nsis",
+    "icon": "resources/icon.ico"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "installerIcon": "resources/icon.ico",
+    "uninstallerIcon": "resources/icon.ico",
+    "installerHeaderIcon": "resources/icon.ico"
   },
   "dependencies": {
     "electron-updater": "^6.3.4"
